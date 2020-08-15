@@ -1,0 +1,34 @@
+# object file
+*.o
+
+# dependency files
+*.d
+
+# elf file
+*.elf
+
+# bin file
+*.bin
+
+# static library
+*.a
+
+# share library
+*.so
+
+# assembly list file
+*.lst
+
+# map file
+*.map
+
+# ctags
+tags
+
+# cscopes
+cscope.in.out
+cscope.out
+cscope.po.out
+
+# tmpt file
+*.swp
