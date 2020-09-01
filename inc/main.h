@@ -41,6 +41,12 @@
 #include "stm32f4xx_hal.h"
 #include "stm32f429i_discovery.h"
 
+#include "FreeRTOS.h"
+#include "task.h"
+#include "semphr.h"
+
+#include <string.h>
+
 /* Exported types ------------------------------------------------------------*/
 /* Exported constants --------------------------------------------------------*/
 /* User can use this section to tailor USARTx/UARTx instance used and associated 

@@ -127,9 +127,7 @@ void UsageFault_Handler(void)
   * @param  None
   * @retval None
   */
-void SVC_Handler(void)
-{
-}
+// define in FreeRTOS/Source/portable/GCC/port.c
 
 /**
   * @brief  This function handles Debug Monitor exception.
@@ -145,19 +143,14 @@ void DebugMon_Handler(void)
   * @param  None
   * @retval None
   */
-void PendSV_Handler(void)
-{
-}
+// define in FreeRTOS/Source/portable/GCC/port.c
 
 /**
   * @brief  This function handles SysTick Handler.
   * @param  None
   * @retval None
   */
-void SysTick_Handler(void)
-{
-  HAL_IncTick();
-}
+// define in FreeRTOS/Source/portable/GCC/port.c
 
 /******************************************************************************/
 /*                 STM32F4xx Peripherals Interrupt Handlers                   */

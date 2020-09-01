@@ -43,7 +43,7 @@ include $(MKFLS_DIR)/*.mk
 # Machine dependent flags
 
 MCFLAGS += -mlittle-endian -mthumb -mcpu=cortex-m4 -mthumb-interwork
-MCFLAGS += -mfloat-abi=soft -mfpu=fpv4-sp-d16
+MCFLAGS += -mfloat-abi=hard -mfpu=fpv4-sp-d16
 
 #########################################
 # Assembler flag
@@ -55,8 +55,9 @@ ASFLAGS = $(CFLAGS)
 
 CFLAGS += -g3 -O0
 CFLAGS += -Wdouble-promotion -Wall
-CFLAGS += $(MCFLAGS)
 CFLAGS += -ffreestanding -fno-common
+CFLAGS += -gdwarf-2
+CFLAGS += $(MCFLAGS)
 CFLAGS += $(patsubst %, -I %, $(INLS_DIR))
 CFLAGS += $(CC_DEPFLAGS)
 CFLAGS += $(DFLAGS)
@@ -64,11 +65,15 @@ CFLAGS += $(DFLAGS)
 #########################################
 # linker flags
 
+LDFLAGS += -g3 -O0
+LDFLAGS += -Wdouble-promotion -Wall
+LDFLAGS += -ffreestanding -fno-common
 LDFLAGS += --specs=nosys.specs # get rid of __eixt noexisted warning
+LDFLAGS += -gdwarf-2
+LDFLAGS += $(MCFLAGS)
 LDFLAGS += -Wl,--print-memory-usage
 LDFLAGS += -Wl,-T $(LD_SCRIPT)
 LDFLAGS += -Wl,-Map=$(MAP)
-LDFLAGS += $(MCFLAGS)
 
 #########################################
 # dependency flags

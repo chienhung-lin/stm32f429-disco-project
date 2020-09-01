@@ -39,35 +39,34 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 
-/** @addtogroup STM32F4xx_HAL_Examples
+/** @ingroup STM32F4xx_FreeRTOS_Counting_Tasks_Example
   * @{
   */
 
-/** @addtogroup UART_TwoBoards_ComPolling
-  * @{
-  */ 
-
 /* Private typedef -----------------------------------------------------------*/
+typedef struct package_type {
+	TaskHandle_t task_handle;
+	uint8_t task_name[16];
+	uint32_t count;
+} pkg_t;
+
 /* Private define ------------------------------------------------------------*/
-//#define TRANSMITTER_BOARD 
+#define MANAGER_STACK_DEPTH	(1024U)
+#define WORKER_STACK_DEPTH	(1024U)
 
 /* Private macro -------------------------------------------------------------*/
+#define ASSERT(exp) if (exp) Error_Handler()
+
 /* Private variables ---------------------------------------------------------*/
-/* UART handler declaration */
-UART_HandleTypeDef UartHandle;
-
-/* Buffer used for transmission */
-uint8_t aTxBuffer[] = " **** UART_TwoBoards_ComPolling ****  **** UART_TwoBoards_ComPolling ****  **** UART_TwoBoards_ComPolling **** ";
-
-/* Buffer used for reception */
-uint8_t aRxBuffer[RXBUFFERSIZE];
-
 /* Private function prototypes -----------------------------------------------*/
 static void SystemClock_Config(void);
+static void count_tasks_start(void * parameter);
+static void manager_task(void * parameter);
+static void work_task(void * parameter);
+static void uart_send(UART_HandleTypeDef *huart, uint8_t *buff, uint32_t len);
 static void Error_Handler(void);
-static uint16_t Buffercmp(uint8_t* pBuffer1, uint8_t* pBuffer2, uint16_t BufferLength);
-
-/* Private functions ---------------------------------------------------------*/
+static void itoa(int32_t num, uint8_t *str);
+static void reverse(uint8_t *begin, uint8_t *end);
 
 /**
   * @brief  Main program
@@ -92,122 +91,18 @@ int main(void)
   /* Configure the system clock to 180 MHz */
   SystemClock_Config();
 
-  /*##-1- Configure the UART peripheral ######################################*/
-  /* Put the USART peripheral in the Asynchronous mode (UART Mode) */
-  /* UART1 configured as follow:
-      - Word Length = 8 Bits
-      - Stop Bit = One Stop bit
-      - Parity = None
-      - BaudRate = 9600 baud
-      - Hardware flow control disabled (RTS and CTS signals) */
-  UartHandle.Instance          = USARTx;
-  
-  UartHandle.Init.BaudRate     = 9600;
-  UartHandle.Init.WordLength   = UART_WORDLENGTH_8B;
-  UartHandle.Init.StopBits     = UART_STOPBITS_1;
-  UartHandle.Init.Parity       = UART_PARITY_NONE;
-  UartHandle.Init.HwFlowCtl    = UART_HWCONTROL_NONE;
-  UartHandle.Init.Mode         = UART_MODE_TX_RX;
-  UartHandle.Init.OverSampling = UART_OVERSAMPLING_16;
-    
-  if(HAL_UART_Init(&UartHandle) != HAL_OK)
-  {
-    Error_Handler();
-  }
+  BSP_LED_Toggle(LED3);
 
-#if 0
+  count_tasks_start(NULL);
 
-#ifdef TRANSMITTER_BOARD
-
-  /* Configure USER Button */
-  BSP_PB_Init(BUTTON_KEY, BUTTON_MODE_GPIO);
-  /* Wait for USER Button press before starting the Communication */
-  while (BSP_PB_GetState(BUTTON_KEY) == RESET)
-  {
-  }
-  
-  /* The board sends the message and expects to receive it back */
-  
-  /*##-2- Start the transmission process #####################################*/  
-  /* While the UART in reception process, user can transmit data through 
-     "aTxBuffer" buffer */
-  if(HAL_UART_Transmit(&UartHandle, (uint8_t*)aTxBuffer, TXBUFFERSIZE, 5000)!= HAL_OK)
-  {
-    Error_Handler();   
-  }
-  
-  /* Turn LED3 on: Transfer in transmission process is correct */
-  /* then Off for next transmission */
-  BSP_LED_On(LED3);
-  HAL_Delay(200);
-  BSP_LED_Off(LED3);
-  
-  /*##-3- Put UART peripheral in reception process ###########################*/  
-  if(HAL_UART_Receive(&UartHandle, (uint8_t *)aRxBuffer, RXBUFFERSIZE, 5000) != HAL_OK)
-  {
-    Error_Handler();  
-  }
-    
-  /* Turn LED3 on: Transfer in transmission process is correct */
-  /* then Off for next transmission */
-  BSP_LED_On(LED3);
-  HAL_Delay(200);
-  BSP_LED_Off(LED3);
-  
-#else
-  
-  /* The board receives the message and sends it back */
-
-  /*##-2- Put UART peripheral in reception process ###########################*/
-  if(HAL_UART_Receive(&UartHandle, (uint8_t *)aRxBuffer, RXBUFFERSIZE, 5000) != HAL_OK)
-  {
-    Error_Handler();    
-  }
-  
-  /* Turn LED3 on: Transfer in transmission process is correct */
-  /* then Off for next transmission */
-  BSP_LED_On(LED3);
-  HAL_Delay(200);
-  BSP_LED_Off(LED3);
-  
-  /*##-3- Start the transmission process #####################################*/  
-  /* While the UART in reception process, user can transmit data through 
-     "aTxBuffer" buffer */
-  if(HAL_UART_Transmit(&UartHandle, (uint8_t*)aTxBuffer, TXBUFFERSIZE, 5000)!= HAL_OK)
-  {
-    Error_Handler();
-  }
-  
-  /* Turn LED3 on: Transfer in transmission process is correct */
-  /* then Off for next transmission */
-  BSP_LED_On(LED3);
-  HAL_Delay(200);
-  BSP_LED_Off(LED3);
-  
-#endif /* TRANSMITTER_BOARD */
-  
-  /*##-4- Compare the sent and received buffers ##############################*/
-  if(Buffercmp((uint8_t*)aTxBuffer,(uint8_t*)aRxBuffer,RXBUFFERSIZE))
-  {
-    Error_Handler();  
-  }
-
-#endif
+  vTaskStartScheduler();
 
   /* Infinite loop */
-  while (1)
-  {
-    /* Toggle LED3 */
-    BSP_LED_Toggle(LED3);
-   
-    if (HAL_UART_Transmit(&UartHandle, (uint8_t*)aTxBuffer, TXBUFFERSIZE, 5000)!= HAL_OK) {
-        Error_Handler();
-    }
+  while (1) ;
 
-    /* Wait for 40ms */
-    HAL_Delay(1000);
-  }
 }
+
+/* Private functions ---------------------------------------------------------*/
 
 /**
   * @brief  System Clock Configuration
@@ -286,28 +181,6 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *UartHandle)
 }
 
 /**
-  * @brief  Compares two buffers.
-  * @param  pBuffer1, pBuffer2: buffers to be compared.
-  * @param  BufferLength: buffer's length
-  * @retval 0  : pBuffer1 identical to pBuffer2
-  *         >0 : pBuffer1 differs from pBuffer2
-  */
-static uint16_t Buffercmp(uint8_t* pBuffer1, uint8_t* pBuffer2, uint16_t BufferLength)
-{
-  while (BufferLength--)
-  {
-    if ((*pBuffer1) != *pBuffer2)
-    {
-      return BufferLength;
-    }
-    pBuffer1++;
-    pBuffer2++;
-  }
-
-  return 0;
-}
-
-/**
   * @brief  This function is executed in case of error occurrence.
   * @param  None
   * @retval None
@@ -342,9 +215,197 @@ void assert_failed(uint8_t* file, uint32_t line)
 #endif
 
 /**
-  * @}
+  * @brief  create manager task before starting scheduling
+  * @param  void *: parameter
+  * @retval None
   */
+static void count_tasks_start(void * parameter)
+{
+	TaskHandle_t manager_handle;
+	BaseType_t result = pdTRUE;
 
+	result = xTaskCreate(manager_task, "manager", MANAGER_STACK_DEPTH, (void *)NULL, 1, &manager_handle);
+	
+	ASSERT(result == pdFALSE);
+}
+
+/**
+  * @brief  manager task code
+  * @param  void *: parameter
+  * @retval None
+  */
+static void manager_task(void * parameter)
+{
+	/* eliminate compile error */
+	(void)parameter;
+
+	UART_HandleTypeDef *huart;
+	pkg_t *pkg;
+	BaseType_t result;
+	uint32_t i, len;
+	uint8_t buff[32];
+
+	/* create hal uart handle */
+	huart = (UART_HandleTypeDef *)pvPortMalloc(sizeof(UART_HandleTypeDef));
+	ASSERT(huart == NULL);
+
+	/* create arrays of packages */
+	pkg = (pkg_t *)pvPortMalloc(sizeof(pkg_t) * 4);
+	ASSERT(pkg == NULL);
+
+	/*##-1- Configure the UART peripheral ######################################*/
+	/* Put the USART peripheral in the Asynchronous mode (UART Mode) */
+	/* UART1 configured as follow:
+		- Word Length = 8 Bits
+		- Stop Bit = One Stop bit
+		- Parity = None
+		- BaudRate = 9600 baud
+		- Hardware flow control disabled (RTS and CTS signals) */
+	huart->Instance          = USARTx;
+
+	huart->Init.BaudRate     = 9600;
+	huart->Init.WordLength   = UART_WORDLENGTH_8B;
+	huart->Init.StopBits     = UART_STOPBITS_1;
+	huart->Init.Parity       = UART_PARITY_NONE;
+	huart->Init.HwFlowCtl    = UART_HWCONTROL_NONE;
+	huart->Init.Mode         = UART_MODE_TX_RX;
+	huart->Init.OverSampling = UART_OVERSAMPLING_16;
+
+	ASSERT(HAL_UART_Init(huart) != HAL_OK);
+
+	for (i = 0;i < 4;++i) {
+		
+		pkg[i].count = 0;
+
+		memset(pkg[i].task_name, '\0', 16);
+
+		memcpy(pkg[i].task_name, "worker_", 7);
+
+		pkg[i].task_name[7] = '0' + i;
+
+		result = xTaskCreate(
+				work_task,
+				(char *)pkg[i].task_name,
+				WORKER_STACK_DEPTH,
+				(void *)&pkg[i].count,
+				0,
+				&pkg[i].task_handle);
+		ASSERT(result == pdFALSE);
+	}
+
+	while (1) {
+
+		// sleep 4 ms to yeild for work tasks
+		vTaskDelay(40);
+
+		for (i = 0;i < 4;++i) {
+			
+			memset(buff, '\0', 32);
+
+			len = strlen((char *)pkg[i].task_name);
+			memcpy(buff, pkg[i].task_name, len);
+			
+			buff[len++] = ':';
+			
+			itoa(pkg[i].count, buff+len);
+			len += strlen((char *)buff+len);
+			
+			memcpy(buff+len, "\r\n", 2);
+			len += 2;
+
+			uart_send(huart, buff, len);
+		}
+	}
+}
+
+/**
+  * @brief  work task code
+  * @param  void * : parameter
+  * @retval None
+  */
+static void work_task(void * parameter)
+{
+	uint32_t old_tick = 0, new_tick = 0;
+	uint32_t *count_ptr;
+
+	count_ptr = (uint32_t *)parameter;
+
+	old_tick = new_tick = HAL_GetTick();
+
+	while (1) {
+		new_tick = HAL_GetTick();
+
+		if (old_tick != new_tick) {
+
+			old_tick = new_tick;
+
+			++(*count_ptr);
+		}
+
+		HAL_Delay(1);
+	}
+}
+
+/**
+  * @brief  access uart transmit and protect the critical section via mutex
+  * @param  UART_HandleTypeDef * : huart
+  * @param  uint8_t *    : buff
+  * @param  uint32_t     : len
+  * @retval None
+  */
+static void uart_send(UART_HandleTypeDef *huart, uint8_t *buff, uint32_t len)
+{
+	ASSERT(HAL_UART_Transmit(huart, buff, len, HAL_MAX_DELAY)!= HAL_OK);
+}
+
+/**
+  * @brief  integer convert to a string
+  * @param  int32_t   : num
+  * @param  uint8_t * : str
+  * @retval None
+  */
+static void itoa(int32_t num, uint8_t *str)
+{
+	uint8_t *tmp = str,
+		sign = 0;
+
+	if (num < 0) {
+		sign = 1;
+		num = ~num + 1;
+	}
+
+	do {
+		*tmp = '0' + num % 10;
+		++tmp;
+		num /= 10;
+	} while (num) ;
+
+	if (sign) {
+		*tmp = '-';
+		++tmp;
+	}
+
+	reverse(str, tmp-1);
+}
+
+/**
+  * @brief  reverse string
+  * @param  uint8_t * : begin
+  * @param  uint8_t * : end
+  * @retval None
+  */
+static void reverse(uint8_t *begin, uint8_t *end)
+{
+	uint8_t tmp;
+
+	while (begin < end) {
+		tmp = *begin;
+		*begin = *end;
+		*end = tmp;
+		++begin;
+		--end;
+	}
+}
 /**
   * @}
   */
